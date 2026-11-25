@@ -40,7 +40,7 @@
       </section>
       <aside id="inspector" class="inspector" aria-label="Match evidence"></aside>
     </div>
-    <footer><span>QIE mainnet · Chain 1990</span><span>Invoice rows stay in this tab.</span></footer>
+    <footer><span id="network-footer">QIE · Chain 1990</span><button id="anchor-open" class="text-button" type="button" hidden>Verify evidence anchor ↗</button><span>Invoice rows stay in this tab.</span></footer>
   </main>
   <dialog id="invoice-dialog">
     <form method="dialog" class="close-row"><button class="icon-button" aria-label="Close invoice import">×</button></form>
@@ -70,6 +70,20 @@
     </form>
     <p id="receipt-error" class="error" role="alert" hidden></p>
     <div id="receipt-preview" class="receipt-preview" aria-live="polite"></div>
+  </dialog>
+  <dialog id="anchor-dialog">
+    <form method="dialog" class="close-row"><button class="icon-button" aria-label="Close evidence anchor verification">×</button></form>
+    <h2>Verify an evidence anchor</h2>
+    <p>Check a MerchantFlow export against a publisher’s on-chain commitment. The file stays in this tab.</p>
+    <form id="anchor-form">
+      <label for="anchor-publisher">Publisher address</label>
+      <input id="anchor-publisher" name="publisher" type="text" placeholder="0x…" minlength="42" maxlength="42" spellcheck="false" required>
+      <label for="anchor-file">MerchantFlow evidence JSON</label>
+      <input id="anchor-file" type="file" accept=".json,application/json" required>
+      <button class="button primary" type="submit">Verify anchor</button>
+    </form>
+    <p id="anchor-error" class="error" role="alert" hidden></p>
+    <div id="anchor-result" class="receipt-preview" aria-live="polite"></div>
   </dialog>
 </body>
 </html>

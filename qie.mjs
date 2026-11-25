@@ -1,7 +1,11 @@
+import { createHash } from 'node:crypto';
 import { address, amount } from './public/ledger.mjs';
 
 export const CHAIN_ID = 1990;
 export const MAINNET_RPC = 'https://rpc1mainnet.qie.digital';
+// ReceiptAnchor.sol, Solidity 0.8.30, Berlin EVM, default optimizer settings in foundry.toml.
+export const RECEIPT_ANCHOR_CODE_SHA256 = 'fb1089d4e9c7ef711675585895b695cfbb2d546315262f9179ad6a3b8613ae25';
+const ANCHORED_AT_SELECTOR = '0xf8c2919d';
 export const QUSDC = '0x3f43da82ec9a4f5285f10faf1f26eca7319e5da5';
 export const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 export const SAMPLE = {
@@ -30,7 +34,7 @@ export async function qieNetwork(rpc) {
   return { chainId: CHAIN_ID, block: BigInt(block).toString() };
 }
 
-export async function qieReceipt(rpc, request) {
+export async function qieReceipt(rpc, request, mainnet = true) {
   if (!HASH.test(request.tx)) throw new InputError('Enter a transaction hash (0x followed by 64 hex characters).');
   const hash = request.tx.toLowerCase();
   let recipient;
@@ -38,8 +42,8 @@ export async function qieReceipt(rpc, request) {
   catch (error) { throw new InputError(error.message); }
   if (Number(await rpc('eth_chainId')) !== CHAIN_ID) throw new Error('RPC returned the wrong chain.');
   const receipt = await rpc('eth_getTransactionReceipt', [hash]);
-  if (!receipt) throw new InputError('No confirmed QIE mainnet receipt was found.');
-  if (receipt.status !== '0x1') throw new InputError('The QIE mainnet transaction failed.');
+  if (!receipt) throw new InputError('No confirmed QIE receipt was found.');
+  if (receipt.status !== '0x1') throw new InputError('The QIE transaction failed.');
   const [transaction, block] = await Promise.all([
     rpc('eth_getTransactionByHash', [hash]), rpc('eth_getBlockByNumber', [receipt.blockNumber, false]),
   ]);
@@ -51,7 +55,7 @@ export async function qieReceipt(rpc, request) {
   const payment = (payer, asset, value, position) => ({
     id: CHAIN_ID + ':' + hash + ':' + position, payer: address(payer), recipient, asset,
     amount: amount(value, asset, 0), date,
-    evidence: { kind: 'qie-mainnet', chainId: CHAIN_ID, tx: hash, position, block: BigInt(receipt.blockNumber).toString() },
+    evidence: { kind: mainnet ? 'qie-mainnet' : 'qie-local-simulation', chainId: CHAIN_ID, tx: hash, position, block: BigInt(receipt.blockNumber).toString() },
   });
   const results = [];
   if (transaction.to?.toLowerCase() === recipient && transaction.input === '0x' && BigInt(transaction.value) > 0n) {
@@ -68,4 +72,24 @@ export async function qieReceipt(rpc, request) {
   }
   if (!results.length) throw new InputError('No supported incoming QIE or QUSDC transfer was found for this address.');
   return results;
+}
+
+export async function qieAnchorStatus(rpc, contract, request) {
+  if (!HASH.test(request.commitment)) throw new InputError('Enter a 32-byte evidence commitment.');
+  let publisher;
+  try { publisher = address(request.publisher); }
+  catch (error) { throw new InputError(error.message); }
+  const { block } = await qieNetwork(rpc);
+  const blockTag = '0x' + BigInt(block).toString(16);
+  const code = await rpc('eth_getCode', [contract, blockTag]);
+  if (typeof code !== 'string' || !/^0x(?:[0-9a-f]{2})+$/i.test(code) ||
+      createHash('sha256').update(Buffer.from(code.slice(2), 'hex')).digest('hex') !== RECEIPT_ANCHOR_CODE_SHA256) {
+    throw new Error('The configured anchor runtime bytecode differs from the pinned release.');
+  }
+  const commitment = request.commitment.toLowerCase();
+  const data = ANCHORED_AT_SELECTOR + publisher.slice(2).padStart(64, '0') + commitment.slice(2);
+  const value = await rpc('eth_call', [{ to: contract, data }, blockTag]);
+  if (!HASH.test(value) || BigInt(value) > BigInt(block)) throw new Error('RPC did not return a valid anchor block.');
+  const anchorBlock = BigInt(value);
+  return { contract, publisher, commitment, anchorBlock: anchorBlock > 0n ? anchorBlock.toString() : null, observedBlock: block };
 }

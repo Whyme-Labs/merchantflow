@@ -1,4 +1,5 @@
-import { amount, approve, auditRecord, importCsv, mergeRecords, reconcile, units } from './ledger.mjs';
+import { amount, approve, importCsv, mergeRecords, reconcile, units } from './ledger.mjs';
+import { createEvidence, newSalt, verifyEvidence } from './evidence.mjs';
 import { SAMPLE_INVOICES, SAMPLE_PAYMENTS } from './sample.mjs';
 
 const $ = selector => document.querySelector(selector);
@@ -16,6 +17,8 @@ const emptyLedger = () => ({ mode: 'live', invoices: [], payments: [], approvals
 let state = fromDemo();
 let receiptPreview = [];
 let receiptSequence = 0;
+let anchorSequence = 0;
+let config = { mainnet: true, anchor: null };
 
 function summary(results) {
   const totals = new Map();
@@ -27,7 +30,7 @@ function summary(results) {
   const ambiguous = results.groups.filter(group => group.length > 1).length;
   const cells = [
     ['Invoices', state.invoices.length, state.mode === 'demo' ? 'Sample records' : 'From CSV'],
-    ['Incoming payments', state.payments.length, state.mode === 'demo' ? 'Sample records' : 'Verified QIE mainnet receipts'],
+    ['Incoming payments', state.payments.length, state.mode === 'demo' ? 'Sample records' : config.mainnet ? 'Verified QIE mainnet receipts' : 'Verified local receipts'],
     ['Review groups', pending, ambiguous ? count(ambiguous, 'ambiguous group') : 'Ready for review'],
     ['Approved value', totalLabel, count(state.approvals.length, 'match', 'matches')],
   ];
@@ -58,7 +61,8 @@ function reviewQueue(results) {
 function evidencePayment(row) {
   if (row.evidence.kind === 'statement') return `<small>${escape(row.source)} · ${row.date}</small>`;
   const { tx, block, position } = row.evidence;
-  return `<small><a href="https://mainnet.qie.digital/tx/${encodeURIComponent(tx)}" target="_blank" rel="noopener">Explorer receipt ↗</a> · block ${escape(block)} · ${position === 'native' ? 'native transfer' : 'log ' + escape(position)} · ${row.date}</small>`;
+  const source = config.mainnet ? `<a href="https://mainnet.qie.digital/tx/${encodeURIComponent(tx)}" target="_blank" rel="noopener">Explorer receipt ↗</a>` : 'Local receipt';
+  return `<small>${source} · block ${escape(block)} · ${position === 'native' ? 'native transfer' : 'log ' + escape(position)} · ${row.date}</small>`;
 }
 
 function inspector(match, options) {
@@ -112,15 +116,10 @@ function download(filename, content, type) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-const hex = bytes => Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
-
 async function exportEvidence(match) {
-  if (!state.salts.has(match.id)) state.salts.set(match.id, hex(crypto.getRandomValues(new Uint8Array(32))));
-  const salt = state.salts.get(match.id);
-  const record = auditRecord(match, salt);
-  const bytes = new TextEncoder().encode(JSON.stringify(record));
-  const commitment = '0x' + hex(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
-  download('merchantflow-evidence.json', JSON.stringify({ algorithm: 'sha256', commitment, record }, null, 2) + '\n', 'application/json');
+  if (!state.salts.has(match.id)) state.salts.set(match.id, newSalt());
+  const evidence = await createEvidence(match, state.salts.get(match.id));
+  download('merchantflow-evidence.json', JSON.stringify(evidence, null, 2) + '\n', 'application/json');
 }
 
 function errorAt(selector, message = '') {
@@ -142,7 +141,7 @@ async function checkNetwork() {
   try {
     const result = await get('/api/network');
     button.className = 'network live';
-    button.lastChild.textContent = 'QIE mainnet · Block ' + result.block;
+    button.lastChild.textContent = (config.mainnet ? 'QIE mainnet' : 'Local QIE simulation') + ' · Block ' + result.block;
   } catch {
     button.className = 'network offline';
     button.lastChild.textContent = 'QIE check unavailable · Retry';
@@ -159,13 +158,13 @@ async function verifyReceipt(sample) {
   errorAt('#receipt-error');
   receiptPreview = [];
   const preview = $('#receipt-preview');
-  preview.textContent = 'Looking up QIE mainnet receipt…';
+  preview.textContent = 'Looking up the QIE receipt…';
   receiptControls(true);
   try {
     const query = new URLSearchParams({ tx: form.get('tx')?.trim(), recipient: form.get('recipient')?.trim() });
     const rows = await get(sample ? '/api/sample-receipt' : '/api/receipt?' + query);
     if (sequence !== receiptSequence) return;
-    receiptPreview = rows.map(row => ({ ...row, title: row.id, value: units(row.amount, row.asset), source: 'QIE mainnet' }));
+    receiptPreview = rows.map(row => ({ ...row, title: row.id, value: units(row.amount, row.asset), source: config.mainnet ? 'QIE mainnet' : 'Local QIE simulation' }));
     preview.innerHTML = rows.map(row => `<p><strong>${escape(row.amount)} ${escape(row.asset)}</strong> · ${evidencePayment(row)}</p>`).join('') +
       `<p>Recipient ${escape(rows[0].recipient)}</p><button id="add-receipt" class="button primary" type="button">${state.mode === 'demo' ? 'Start ledger with receipt' : 'Add to ledger'}</button>`;
   } catch (error) {
@@ -210,6 +209,37 @@ $('#receipt-dialog').addEventListener('close', () => { receiptSequence += 1; });
 $('#receipt-form').addEventListener('submit', event => { event.preventDefault(); verifyReceipt(false); });
 $('#sample-receipt').addEventListener('click', () => verifyReceipt(true));
 $('#network').addEventListener('click', checkNetwork);
+
+$('#anchor-open').addEventListener('click', () => {
+  $('#anchor-form').reset();
+  $('#anchor-form button[type=submit]').disabled = false;
+  $('#anchor-result').textContent = '';
+  errorAt('#anchor-error');
+  $('#anchor-dialog').showModal();
+});
+$('#anchor-dialog').addEventListener('close', () => { anchorSequence += 1; });
+$('#anchor-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const sequence = ++anchorSequence;
+  const button = event.currentTarget.querySelector('button[type=submit]');
+  const output = $('#anchor-result');
+  errorAt('#anchor-error');
+  output.textContent = '';
+  button.disabled = true;
+  try {
+    const file = $('#anchor-file').files[0];
+    if (!file || file.size > 1_000_000) throw new Error('Choose a MerchantFlow evidence JSON file no larger than 1 MB.');
+    const commitment = await verifyEvidence(JSON.parse(await file.text()));
+    const query = new URLSearchParams({ publisher: $('#anchor-publisher').value.trim(), commitment });
+    const status = await get('/api/anchor?' + query);
+    if (sequence !== anchorSequence) return;
+    if (status.anchorBlock) {
+      const source = config.mainnet ? `<a href="https://mainnet.qie.digital/address/${encodeURIComponent(status.contract)}" target="_blank" rel="noopener">ReceiptAnchor contract ↗</a>` : escape(status.contract);
+      output.innerHTML = `<p><strong>Evidence matches the publisher’s anchor.</strong></p><p>Anchored in block ${escape(status.anchorBlock)} · ${source}</p>`;
+    } else output.textContent = 'The export is intact. This publisher has no recorded anchor for its commitment.';
+  } catch (error) { if (sequence === anchorSequence) errorAt('#anchor-error', error.message); }
+  finally { if (sequence === anchorSequence) button.disabled = false; }
+});
 
 function addReceipt() {
   try {
@@ -261,4 +291,12 @@ document.addEventListener('click', event => {
   else if (['approve', 'undo', 'export'].includes(button.id)) evidenceAction(button.id);
 });
 render();
+try {
+  config = await get('/api/config');
+  $('#sample-receipt').hidden = !config.mainnet;
+  $('#anchor-open').hidden = !config.anchor;
+  $('#network-footer').textContent = (config.mainnet ? 'QIE mainnet' : 'Local QIE simulation') + ' · Chain 1990';
+  if (!config.mainnet) $('#receipt-dialog > p').textContent = 'Read confirmed transfers on the local QIE simulation. No wallet connection is needed.';
+  render();
+} catch { /* The sample ledger remains usable while the server is unavailable. */ }
 checkNetwork();

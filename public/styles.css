@@ -95,14 +95,14 @@ h1 em { color: #4d705a; font-weight: inherit; }
 .detail-account code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: inherit; }
 .approval { padding-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .inspector .approval .button { min-height: 36px; padding: 7px 10px; }
-footer { display: flex; justify-content: space-between; gap: 10px; margin-top: 37px; border-top: 1px solid var(--line); padding: 14px 0; color: var(--muted); font-size: .75rem; }
+footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 37px; border-top: 1px solid var(--line); padding: 14px 0; color: var(--muted); font-size: .75rem; }
 dialog { width: min(510px, calc(100% - 28px)); border: 1px solid var(--line); border-top: 4px solid var(--green); border-radius: 3px; color: var(--ink); background: var(--sheet); padding: 22px; }
 dialog::backdrop { background: #16291fd1; }
 dialog h2 { margin: 0 14px 5px 0; font: 400 29px/1.12 var(--serif); letter-spacing: -.05em; }
 dialog p { color: var(--muted); font-size: .86rem; }
 .close-row { position: absolute; top: 7px; right: 8px; }
 .icon-button { font: 27px/1 var(--serif); padding: 3px 7px; }
-#invoice-form, #receipt-form { display: grid; gap: 8px; margin-top: 14px; }
+#invoice-form, #receipt-form, #anchor-form { display: grid; gap: 8px; margin-top: 14px; }
 dialog label { font-size: .8rem; font-weight: 650; }
 dialog input { min-width: 0; min-height: 38px; border: 1px solid var(--line); border-radius: 2px; background: var(--paper); color: var(--ink); padding: 8px; }
 dialog input[type='text'] { font: .77rem var(--mono); }
