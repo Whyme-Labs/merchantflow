@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { address, amount } from '../public/ledger.mjs';
-import { qieNetwork, rpcClient } from '../qie.mjs';
+import { qieNetwork, rpcClient } from '../public/qie.mjs';
 
 try {
   const artifact = JSON.parse(await readFile(new URL('../out/ReceiptAnchor.sol/ReceiptAnchor.json', import.meta.url), 'utf8'));

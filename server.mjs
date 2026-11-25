@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { address } from './public/ledger.mjs';
-import { InputError, MAINNET_RPC, qieAnchorStatus, qieNetwork, qieReceipt, rpcClient, SAMPLE } from './qie.mjs';
+import { InputError, MAINNET_RPC, qieAnchorStatus, qieNetwork, qieReceipt, rpcClient, SAMPLE } from './public/qie.mjs';
 
 const rpcUrl = new URL(process.env.QIE_RPC_URL || MAINNET_RPC);
 const mainnet = /^https:\/\/rpc[1-5]mainnet\.qie\.digital\/?$/.test(rpcUrl.href);
@@ -14,6 +14,7 @@ const routes = new Map(Object.entries({
   '/': ['index.html', 'text/html; charset=utf-8'],
   '/styles.css': ['styles.css', 'text/css; charset=utf-8'],
   '/app.mjs': ['app.mjs', 'text/javascript; charset=utf-8'],
+  '/get.mjs': ['get.mjs', 'text/javascript; charset=utf-8'],
   '/evidence.mjs': ['evidence.mjs', 'text/javascript; charset=utf-8'],
   '/ledger.mjs': ['ledger.mjs', 'text/javascript; charset=utf-8'],
   '/sample.mjs': ['sample.mjs', 'text/javascript; charset=utf-8'],

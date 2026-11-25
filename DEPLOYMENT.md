@@ -1,5 +1,17 @@
 # MerchantFlow deployment
 
+## GitHub Pages
+
+Use the static build to give judges a public HTTPS origin. The browser calls the official QIE RPC for receipt and anchor evidence. Reconciliation, approval and export run in the browser. Receipt verification sends the public transaction hash and recipient, and anchor verification reads the public publisher and evidence commitment.
+
+```sh
+npm run build:pages -- /path/to/pages-checkout
+```
+
+Set `QIE_ANCHOR_ADDRESS` to the verified deployment address when building the final entry. Without it, public receipt inspection works and the anchor control stays hidden. The app and its assets can be served under the repository's GitHub Pages path.
+
+## Container
+
 MerchantFlow serves the browser app and JSON API from one Node process. Deploy the Docker image at the root of a dedicated HTTPS origin. HTTPS gives the browser’s SHA-256 API a secure context. Keep `/api/*` and static resources on that origin so a site visitor can verify receipts without credentials or cross-origin access.
 
 ```sh
@@ -40,7 +52,7 @@ The quote uses `eth_estimateGas` and fee reads. It sends no transaction. An opti
 1. Build the verified revision and review the contract source. Before signing, independently check chain `1990`, signer balance, creation hex, transaction value zero, current nonce and fee limits. `forge inspect ReceiptAnchor bytecode` gives the exact initialization bytes. `cast compute-address` gives the expected address for the approved sender and nonce. A wallet confirms the creation transaction, and the normal CREATE address depends on the signer and nonce.
 2. Deploy from an approved wallet. For a supported hardware signer, the Foundry form is `forge create contracts/ReceiptAnchor.sol:ReceiptAnchor --rpc-url https://rpc1mainnet.qie.digital --ledger --sender "$QIE_DEPLOYER" --broadcast`. `QIE_DEPLOYER` is the actual approved address. The command signs and broadcasts. It requires separate owner authorization. Capture successful receipt, deployed address, transaction hash and block. Check the RPC runtime against the pinned SHA-256.
 3. Publish approved source and deployment artifacts to GitHub. Publish contract source verification through the QIE explorer using the same Solidity version, EVM target and optimizer settings. Keep the addresses and source revision in the README or public release notes.
-4. Deploy the image behind HTTPS with the verified `QIE_ANCHOR_ADDRESS`. Use a read-only browser session to check the routes above, the invoice import, the mainnet QUSDC sample, and the runtime-pinned `/api/anchor` query. Test a different publisher and modified evidence as negative controls.
+4. Deploy the static build or the container behind HTTPS with the verified `QIE_ANCHOR_ADDRESS`. Check invoice import, the mainnet QUSDC sample, and the runtime-pinned evidence query in a browser. Test a different publisher and modified evidence as negative controls.
 5. With the owner’s separate approval, publish a single example digest under the intended demo publisher’s wallet. Use a synthetic invoice and verify that only the digest is signed. The expected method is `anchor(bytes32)` and the transaction value is zero. Record its mainnet transaction and demonstrate the browser check with the matching JSON export. This is a demonstration transaction, with no traction attributed to it.
 6. Replace the rehearsal’s local deployment footage with the public app and anchor check, record the actual contract address, and upload the approved video. Complete the contribution review, organizer presentation arrangements and submission using [SUBMISSION.md](SUBMISSION.md).
 

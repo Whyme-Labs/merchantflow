@@ -3,7 +3,7 @@ import test from 'node:test';
 import { createEvidence, newSalt, verifyEvidence } from '../public/evidence.mjs';
 import { importCsv, reconcile } from '../public/ledger.mjs';
 import { SAMPLE_INVOICES, SAMPLE_PAYMENTS } from '../public/sample.mjs';
-import { qieAnchorStatus } from '../qie.mjs';
+import { qieAnchorStatus } from '../public/qie.mjs';
 
 const invoices = importCsv(SAMPLE_INVOICES, 'invoices', 'fixture');
 const payments = importCsv(SAMPLE_PAYMENTS, 'payments', 'fixture');

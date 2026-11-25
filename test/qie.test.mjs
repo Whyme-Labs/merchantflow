@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { QUSDC, qieReceipt, qieNetwork, TRANSFER_TOPIC } from '../qie.mjs';
+import { QUSDC, qieReceipt, qieNetwork, TRANSFER_TOPIC } from '../public/qie.mjs';
 
 const payer = '0x' + 'a'.repeat(40);
 const recipient = '0x' + 'b'.repeat(40);

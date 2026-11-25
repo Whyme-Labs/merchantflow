@@ -1,6 +1,7 @@
 import { amount, approve, importCsv, mergeRecords, reconcile, units } from './ledger.mjs';
 import { createEvidence, newSalt, verifyEvidence } from './evidence.mjs';
 import { SAMPLE_INVOICES, SAMPLE_PAYMENTS } from './sample.mjs';
+import { get } from './get.mjs';
 
 const $ = selector => document.querySelector(selector);
 const escapes = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -126,13 +127,6 @@ function errorAt(selector, message = '') {
   const target = $(selector);
   target.textContent = message;
   target.hidden = !message;
-}
-
-async function get(url) {
-  const response = await fetch(url);
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error);
-  return data;
 }
 
 async function checkNetwork() {

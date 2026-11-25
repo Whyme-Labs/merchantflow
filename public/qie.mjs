@@ -1,5 +1,4 @@
-import { createHash } from 'node:crypto';
-import { address, amount } from './public/ledger.mjs';
+import { address, amount } from './ledger.mjs';
 
 export const CHAIN_ID = 1990;
 export const MAINNET_RPC = 'https://rpc1mainnet.qie.digital';
@@ -82,8 +81,13 @@ export async function qieAnchorStatus(rpc, contract, request) {
   const { block } = await qieNetwork(rpc);
   const blockTag = '0x' + BigInt(block).toString(16);
   const code = await rpc('eth_getCode', [contract, blockTag]);
-  if (typeof code !== 'string' || !/^0x(?:[0-9a-f]{2})+$/i.test(code) ||
-      createHash('sha256').update(Buffer.from(code.slice(2), 'hex')).digest('hex') !== RECEIPT_ANCHOR_CODE_SHA256) {
+  if (typeof code !== 'string' || !/^0x(?:[0-9a-f]{2})+$/i.test(code)) {
+    throw new Error('The configured anchor runtime bytecode differs from the pinned release.');
+  }
+  const bytecode = Uint8Array.from(code.slice(2).match(/../g), byte => Number.parseInt(byte, 16));
+  const digest = await crypto.subtle.digest('SHA-256', bytecode);
+  const fingerprint = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  if (fingerprint !== RECEIPT_ANCHOR_CODE_SHA256) {
     throw new Error('The configured anchor runtime bytecode differs from the pinned release.');
   }
   const commitment = request.commitment.toLowerCase();
