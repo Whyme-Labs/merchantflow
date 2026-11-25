@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MerchantFlow · Settlement review</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="shell mast-inner">
+      <a href="/" class="brand" aria-label="MerchantFlow home"><span class="brand-mark" aria-hidden="true"></span>MerchantFlow</a>
+      <button class="network" id="network" type="button"><span></span>Check QIE mainnet</button>
+    </div>
+  </header>
+  <main class="shell">
+    <section class="intro">
+      <div>
+        <h1>Reconcile <em>payments.</em></h1>
+        <p>Match existing invoices to QIE transfers and review the evidence before posting.</p>
+      </div>
+      <div class="intro-actions">
+        <button class="button" id="receipt-open" type="button">Verify QIE receipt <span aria-hidden="true">↗</span></button>
+        <button class="button primary" id="invoice-open" type="button">Import invoices <span aria-hidden="true">+</span></button>
+      </div>
+    </section>
+    <section id="summary" class="summary" aria-label="Settlement summary"></section>
+    <div class="workspace">
+      <section class="review" aria-label="Reconciliation workspace">
+        <div class="review-nav">
+          <div aria-label="Result view" class="tabs">
+            <button class="tab" type="button" data-tab="review">Review queue</button>
+            <button class="tab" type="button" data-tab="approved">Approved</button>
+          </div>
+          <div class="ledger-mode" id="ledger-mode"></div>
+        </div>
+        <p id="ledger-status" class="ledger-status" role="status" hidden></p>
+        <div id="queue"></div>
+      </section>
+      <aside id="inspector" class="inspector" aria-label="Match evidence"></aside>
+    </div>
+    <footer><span>QIE mainnet · Chain 1990</span><span>Invoice rows stay in this tab.</span></footer>
+  </main>
+  <dialog id="invoice-dialog">
+    <form method="dialog" class="close-row"><button class="icon-button" aria-label="Close invoice import">×</button></form>
+    <h2>Import your invoices</h2>
+    <p>Export your spreadsheet as a comma-delimited UTF-8 CSV. Use the template to map your columns.</p>
+    <div class="dialog-actions"><a href="#" id="template">Download CSV template ↓</a></div>
+    <form id="invoice-form">
+      <label for="invoice-file">Invoice CSV</label>
+      <input name="file" type="file" id="invoice-file" accept=".csv,text/csv" required>
+      <p id="invoice-error" class="error" role="alert" hidden></p>
+      <button class="button primary" type="submit">Import invoices</button>
+    </form>
+  </dialog>
+  <dialog id="receipt-dialog">
+    <form method="dialog" class="close-row"><button class="icon-button" aria-label="Close receipt verification">×</button></form>
+    <h2>Verify a QIE receipt</h2>
+    <p>Read confirmed native QIE or QUSDC transfers credited to the receiving address. No wallet connection is needed.</p>
+    <form id="receipt-form">
+      <label for="tx">Transaction hash</label>
+      <input id="tx" name="tx" type="text" placeholder="0x…" minlength="66" maxlength="66" spellcheck="false" required>
+      <label for="recipient">Recipient address</label>
+      <input id="recipient" name="recipient" type="text" placeholder="0x…" minlength="42" maxlength="42" spellcheck="false" required>
+      <div class="dialog-actions">
+        <button class="button primary" type="submit">Look up receipt</button>
+        <button class="text-button" id="sample-receipt" type="button">Inspect a public example</button>
+      </div>
+    </form>
+    <p id="receipt-error" class="error" role="alert" hidden></p>
+    <div id="receipt-preview" class="receipt-preview" aria-live="polite"></div>
+  </dialog>
+</body>
+</html>

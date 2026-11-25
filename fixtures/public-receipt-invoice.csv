@@ -1,0 +1,2 @@
+invoice_id,customer,payer,recipient,asset,amount,issued_at
+ILLUSTRATION-001,Public receipt walkthrough,0xa8ca925408859d73260a36c05d90407b979904a2,0x1f41ebf1e60e5daa9cdda69637a78a9381b23388,QUSDC,2.1,2026-06-24
